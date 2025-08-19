@@ -3,157 +3,116 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Marvel Marathon</title>
-
-<!-- PWA meta -->
+<title>Marvel Marathon Checklist</title>
 <meta name="theme-color" content="#e62429" />
-<link rel="manifest" href="manifest.webmanifest" />
-<link rel="apple-touch-icon" href="icons/icon-180.png" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="Marvel Marathon" />
-
 <style>
-    :root { --accent:#e62429; }
-    html, body {
-        margin: 0; padding: 0; background:#111; color:#fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    }
-    header {
-        position: sticky; top: 0; z-index: 2;
-        background: var(--accent);
-        padding: env(safe-area-inset-top) 16px 12px 16px;
-        text-align:center; font-weight: 800; letter-spacing: .2px;
-    }
-    .container { max-width: 720px; margin: 0 auto; padding: 12px; }
-    .movie {
-        display:flex; gap:12px; align-items:flex-start; padding:12px; border-bottom:1px solid #2a2a2a;
-    }
-    .movie input { transform: scale(1.3); margin-top: 4px; }
-    .title { font-weight:700; color:#ffd700; }
-    .why { color:#cfcfcf; font-size:.92rem; line-height:1.3rem; }
-    .watched .title, .watched .why { color:#7a7a7a; text-decoration: line-through; }
-    .controls {
-        position: sticky; bottom: 0; z-index: 2;
-        background: linear-gradient(0deg, #111, rgba(17,17,17,0.7));
-        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-        display:flex; gap:10px; justify-content:center;
-    }
-    button {
-        background: var(--accent); color:white; border:none; padding:10px 16px;
-        border-radius:10px; font-weight:700; cursor:pointer;
-    }
-    button:active { transform: translateY(1px); }
-    .progress { text-align:center; margin:10px 0 4px; color:#d9d9d9; font-size:.95rem; }
-    .install-hint {
-        background:#1b1b1b; border:1px solid #2a2a2a; border-radius:10px; padding:10px 12px; margin:10px;
-        font-size:.95rem; display:none;
-    }
-    a { color:#66c0ff; }
+  :root { --accent:#e62429; }
+  html, body { margin:0; padding:0; background:#111; color:#fff; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
+  header { position:sticky; top:0; background:var(--accent); padding:16px; text-align:center; font-weight:800; letter-spacing:.2px; }
+  .container { max-width:720px; margin:0 auto; padding:12px; }
+  .movie { display:flex; gap:12px; align-items:flex-start; padding:12px; border-bottom:1px solid #2a2a2a; }
+  .movie input { transform:scale(1.3); margin-top:4px; }
+  .title { font-weight:700; color:#ffd700; }
+  .why { color:#cfcfcf; font-size:.92rem; line-height:1.3rem; }
+  .watched .title, .watched .why { color:#7a7a7a; text-decoration:line-through; }
+  .progress { text-align:center; margin:6px 0 10px; color:#d9d9d9; font-size:.95rem; }
+  .controls { display:flex; gap:10px; justify-content:center; padding:12px 0; }
+  button { background:var(--accent); color:#fff; border:none; padding:10px 16px; border-radius:10px; font-weight:700; cursor:pointer; }
+  button:active { transform:translateY(1px); }
+  a { color:#66c0ff; }
 </style>
 </head>
 <body>
 <header>Marvel Marathon Checklist</header>
+
 <div class="container">
-  <div id="installHint" class="install-hint">
-    Tip: To install on iPhone, tap <b>Share</b> → <b>Add to Home Screen</b>. Then open it from your Home Screen like an app.
-  </div>
   <div id="progress" class="progress">Loading…</div>
   <div id="movie-list" aria-live="polite"></div>
-</div>
-
-<div class="controls">
-  <button id="btnReset" type="button">Reset</button>
-  <button id="btnShare" type="button">Share Progress</button>
+  <div class="controls">
+    <button id="btnReset" type="button">Reset</button>
+    <button id="btnShare" type="button">Share / Copy Progress</button>
+  </div>
+  <div style="opacity:.8; font-size:.9rem; text-align:center; margin-bottom:14px;">
+    Tip for iPhone: if you host this file somewhere (any HTTPS link), open it in Safari and use <b>Share → Add to Home Screen</b> to pin it like an app.
+  </div>
 </div>
 
 <script>
-// Register service worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').catch(console.error);
-  });
-}
-
-// Install hint for iOS (no native prompt)
-(function showIOSInstallHint(){
-  const ua = window.navigator.userAgent.toLowerCase();
-  const isIOS = /iphone|ipad|ipod/.test(ua);
-  const isInStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-  if (isIOS && !isInStandalone) {
-    document.getElementById('installHint').style.display = 'block';
-  }
-})();
-
 const movies = [
-    {title: "Captain America: The First Avenger", why: "Origin of Cap + Tesseract (Space Stone)"},
-    {title: "Iron Man", why: "Stark’s journey begins"},
-    {title: "Thor", why: "Introduces Thor, Loki, Asgard, Bifrost"},
-    {title: "The Avengers", why: "Heroes unite, Loki returns, Thanos teased"},
-    {title: "Captain America: The Winter Soldier", why: "S.H.I.E.L.D. collapse, Hydra revealed"},
-    {title: "Guardians of the Galaxy", why: "Power Stone + Cosmic side + Thanos"},
-    {title: "Guardians of the Galaxy Vol. 2", why: "Continues Guardians’ story + Ego the Celestial"},
-    {title: "Avengers: Age of Ultron", why: "Mind Stone, Scarlet Witch, Vision"},
-    {title: "Captain America: Civil War", why: "Avengers split + intro: Black Panther & Spider-Man"},
-    {title: "Black Panther", why: "Wakanda’s leadership and tech"},
-    {title: "Spider-Man: Homecoming", why: "Peter’s growth post-Civil War"},
-    {title: "Doctor Strange", why: "Magic + Time Stone + multiverse hint"},
-    {title: "Thor: Ragnarok", why: "Asgard destroyed, leads into Infinity War"},
-    {title: "Avengers: Infinity War", why: "Thanos collects the Stones, universe snapped"},
-    {title: "Avengers: Endgame", why: "Time heist, multiverse begins, huge turning point"},
-    {title: "Spider-Man: Far From Home", why: "Post-Endgame grief + Mysterio illusion"},
-    {title: "WandaVision", why: "Wanda transforms into Scarlet Witch"},
-    {title: "Loki (Season 1)", why: "Multiverse unleashed + Kang variants introduced"},
-    {title: "Spider-Man: No Way Home", why: "Real multiverse chaos, all 3 Spider-Men"},
-    {title: "Doctor Strange in the Multiverse of Madness", why: "Multiverse war begins + Wanda’s arc ends"},
-    {title: "Black Panther: Wakanda Forever", why: "Wakanda post-T’Challa + Namor intro"},
-    {title: "Ant-Man and the Wasp: Quantumania", why: "Full Kang reveal + Multiverse threat escalates"},
-    {title: "Guardians of the Galaxy Vol. 3", why: "Guardians’ final arc, Rocket’s backstory"}
+  {title:"Captain America: The First Avenger", why:"Origin of Cap + Tesseract (Space Stone)"},
+  {title:"Iron Man", why:"Stark’s journey begins"},
+  {title:"Iron Man 2", why:"Tony faces the fallout of being Iron Man"},
+  {title:"Thor", why:"Introduces Thor, Loki, Asgard, Bifrost"},
+  {title:"The Avengers", why:"Heroes unite, Loki returns, Thanos teased"},
+  {title:"Thor: The Dark World", why:"Aether/Reality Stone revealed; Thor & Loki’s bond tested"},
+  {title:"Iron Man 3", why:"Tony’s PTSD arc; ‘clean slate’ moment"},
+  {title:"Captain America: The Winter Soldier", why:"S.H.I.E.L.D. collapses; Hydra revealed"},
+  {title:"Guardians of the Galaxy", why:"Power Stone + cosmic side + Thanos"},
+  {title:"Guardians of the Galaxy Vol. 2", why:"Continues Guardians’ story; Ego the Celestial"},
+  {title:"Avengers: Age of Ultron", why:"Mind Stone; Scarlet Witch and Vision"},
+  {title:"Captain America: Civil War", why:"Avengers split; intro Black Panther & Spider-Man"},
+  {title:"Black Panther", why:"Wakanda’s leadership and tech"},
+  {title:"Spider-Man: Homecoming", why:"Peter’s growth post–Civil War"},
+  {title:"Doctor Strange", why:"Magic + Time Stone + multiverse hint"},
+  {title:"Thor: Ragnarok", why:"Asgard destroyed; leads into Infinity War"},
+  {title:"Avengers: Infinity War", why:"Thanos collects the Stones; the Snap"},
+  {title:"Avengers: Endgame", why:"Time heist; multiverse begins; huge turning point"},
+  {title:"Spider-Man: Far From Home", why:"Post-Endgame grief + Mysterio’s illusions"},
+  {title:"WandaVision", why:"Wanda becomes the Scarlet Witch"},
+  {title:"Loki (Season 1)", why:"Multiverse unleashed; Kang variants"},
+  {title:"Spider-Man: No Way Home", why:"Real multiverse chaos; all 3 Spider-Men"},
+  {title:"Doctor Strange in the Multiverse of Madness", why:"Multiverse conflict; Wanda’s arc ends"},
+  {title:"Black Panther: Wakanda Forever", why:"Wakanda post–T’Challa; Namor"},
+  {title:"Ant-Man and the Wasp: Quantumania", why:"Kang in full focus; multiverse threat"},
+  {title:"Guardians of the Galaxy Vol. 3", why:"Guardians’ final arc; Rocket’s backstory"}
 ];
 
-const STORAGE_KEY = "marvelChecklistV2";
+const STORAGE_KEY = "marvelChecklistV3";
 const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
 
-const listContainer = document.getElementById("movie-list");
+const listEl = document.getElementById("movie-list");
 const progressEl = document.getElementById("progress");
 
 function render() {
-  listContainer.innerHTML = "";
-  let watchedCount = 0;
+  listEl.innerHTML = "";
+  let watched = 0;
 
-  movies.forEach((movie, index) => {
+  movies.forEach((m, i) => {
     const row = document.createElement("div");
-    row.className = "movie" + (saved[index] ? " watched" : "");
+    row.className = "movie" + (saved[i] ? " watched" : "");
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = !!saved[index];
-    checkbox.id = "mv-" + index;
-    checkbox.addEventListener("change", () => {
-      saved[index] = checkbox.checked;
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!saved[i];
+    cb.id = "mv-" + i;
+    cb.addEventListener("change", () => {
+      saved[i] = cb.checked;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
       render();
     });
 
-    const textWrap = document.createElement("label");
-    textWrap.setAttribute("for", checkbox.id);
-    const title = document.createElement("div");
-    title.className = "title";
-    title.textContent = (index+1) + ". " + movie.title;
-    const why = document.createElement("div");
-    why.className = "why";
-    why.textContent = movie.why;
+    const label = document.createElement("label");
+    label.setAttribute("for", cb.id);
 
-    textWrap.appendChild(title);
-    textWrap.appendChild(why);
+    const t = document.createElement("div");
+    t.className = "title";
+    t.textContent = (i + 1) + ". " + m.title;
 
-    row.appendChild(checkbox);
-    row.appendChild(textWrap);
-    listContainer.appendChild(row);
+    const w = document.createElement("div");
+    w.className = "why";
+    w.textContent = m.why;
 
-    if (checkbox.checked) watchedCount++;
+    label.appendChild(t);
+    label.appendChild(w);
+
+    row.appendChild(cb);
+    row.appendChild(label);
+    listEl.appendChild(row);
+
+    if (cb.checked) watched++;
   });
 
-  progressEl.textContent = `Progress: ${watchedCount}/${movies.length} • ${Math.round((watchedCount/movies.length)*100)}%`;
+  progressEl.textContent = `Progress: ${watched}/${movies.length} • ${Math.round((watched / movies.length) * 100)}%`;
 }
 
 document.getElementById("btnReset").addEventListener("click", () => {
@@ -165,21 +124,19 @@ document.getElementById("btnReset").addEventListener("click", () => {
 });
 
 document.getElementById("btnShare").addEventListener("click", async () => {
-  const data = {
-    watched: movies.map((_, i) => !!saved[i]),
-    ts: new Date().toISOString()
-  };
-  const text = `Marvel Marathon Progress:\n` + data.watched.map((v,i)=>`${i+1}. ${movies[i].title} — ${v?'✅ Watched':'⬜️ Not yet'}`).join('\n');
+  const lines = movies.map((m, i) => `${i + 1}. ${m.title} — ${saved[i] ? "✅ Watched" : "⬜️ Not yet"}`);
+  const text = "Marvel Marathon Progress:\n" + lines.join("\n");
   if (navigator.share) {
     try { await navigator.share({ text }); } catch (e) {}
-  } else {
+  } else if (navigator.clipboard) {
     await navigator.clipboard.writeText(text);
     alert("Progress copied to clipboard!");
+  } else {
+    prompt("Copy your progress:", text);
   }
 });
 
 render();
 </script>
-
 </body>
 </html>
